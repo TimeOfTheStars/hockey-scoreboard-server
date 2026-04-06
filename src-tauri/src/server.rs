@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 
-use crate::game_state::{merge_patch, GameState};
+use crate::game_state::{merge_patch_and_sync, GameState};
 
 pub const PREFERRED_HTTP_PORT: u16 = 8765;
 
@@ -50,7 +50,7 @@ async fn patch_editor_state(
     let mut w = state.game.write().await;
     let merged = {
         let current = (*w).clone();
-        merge_patch(&current, &body).map_err(|_| StatusCode::BAD_REQUEST)?
+        merge_patch_and_sync(&current, &body).map_err(|_| StatusCode::BAD_REQUEST)?
     };
     *w = merged;
     serde_json::to_value(&*w)

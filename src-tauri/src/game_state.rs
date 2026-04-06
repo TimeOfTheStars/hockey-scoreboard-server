@@ -35,6 +35,9 @@ pub struct GameState {
     pub logo_b: String,
     #[serde(rename = "Timer")]
     pub timer: String,
+    /// Длина периода для кнопки «Сброс» на пульте (не тикает; обновляется правилами `sync_timer_baseline`).
+    #[serde(rename = "TimerBaseline", default = "default_timer_baseline")]
+    pub timer_baseline: String,
     #[serde(rename = "PowerPlayTimer")]
     pub power_play_timer: String,
     #[serde(rename = "PowerPlayActive")]
@@ -45,6 +48,10 @@ pub struct GameState {
     pub running: bool,
     #[serde(rename = "Visible")]
     pub visible: bool,
+}
+
+fn default_timer_baseline() -> String {
+    "20:00".to_string()
 }
 
 impl Default for GameState {
@@ -66,6 +73,7 @@ impl Default for GameState {
             logo_a: "team-a.png".to_string(),
             logo_b: "team-b.png".to_string(),
             timer: "20:00".to_string(),
+            timer_baseline: default_timer_baseline(),
             power_play_timer: "02:00".to_string(),
             power_play_active: false,
             period: 1,
@@ -153,4 +161,26 @@ pub fn merge_patch(base: &GameState, patch: &serde_json::Value) -> Result<GameSt
         base_map.insert(k.clone(), v.clone());
     }
     serde_json::from_value(base_val).map_err(|e| format!("merge result: {e}"))
+}
+
+/// База для «Сброс» на пульте: при старте = длина периода; на паузе при смене `Timer` = новое значение; после «Стоп» не затираем базу остатком времени.
+pub fn sync_timer_baseline(prev: &GameState, next: &mut GameState) {
+    if next.running {
+        if !prev.running {
+            next.timer_baseline = next.timer.clone();
+        }
+        return;
+    }
+    if prev.running && !next.running {
+        return;
+    }
+    if prev.timer != next.timer {
+        next.timer_baseline = next.timer.clone();
+    }
+}
+
+pub fn merge_patch_and_sync(prev: &GameState, patch: &serde_json::Value) -> Result<GameState, String> {
+    let mut merged = merge_patch(prev, patch)?;
+    sync_timer_baseline(prev, &mut merged);
+    Ok(merged)
 }

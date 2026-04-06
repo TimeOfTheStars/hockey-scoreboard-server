@@ -8,7 +8,6 @@ import {
   resolveApiBase,
 } from "./api";
 import {
-  DEFAULT_TIMER_MMSS,
   gameStateToPatchJson,
   normalizeMmSsLike,
   type GameState,
@@ -39,6 +38,7 @@ function buildEmptyState(): GameState {
     logo_a: "",
     logo_b: "",
     Timer: "",
+    TimerBaseline: "",
     PowerPlayTimer: "",
     PowerPlayActive: false,
     Period: 0,
@@ -218,14 +218,20 @@ export default function App({ variant }: { variant: AppVariant }) {
             <button
               type="button"
               className="big-btn"
-              onClick={() =>
+              onClick={() => {
+                const s = stateRef.current;
+                const t =
+                  normalizeMmSsLike(s.TimerBaseline).trim() ||
+                  normalizeMmSsLike(s.Timer).trim() ||
+                  "20:00";
                 void applyQuickPatch({
-                  Timer: DEFAULT_TIMER_MMSS,
+                  Timer: t,
                   Running: false,
-                })
-              }
+                });
+              }}
             >
-              Сброс ({DEFAULT_TIMER_MMSS})
+              Сброс (
+              {normalizeMmSsLike(state.TimerBaseline).trim() || "…"})
             </button>
           </div>
         </div>
@@ -622,9 +628,10 @@ export default function App({ variant }: { variant: AppVariant }) {
             />
           </label>
           <p className="field-hint">
-            Один таймер для табло и оверлей. На пульте{" "}
-            <Link to="/mobile">/mobile</Link> «Сброс» ставит {DEFAULT_TIMER_MMSS}{" "}
-            и останавливает отсчёт.
+            На паузе выставьте длительность периода в Timer — это же значение
+            пойдёт в «Сброс» на пульте{" "}
+            <Link to="/mobile">/mobile</Link> (после старта база фиксируется при
+            запуске отсчёта).
           </p>
           <label>
             PowerPlayTimer (MM:SS)

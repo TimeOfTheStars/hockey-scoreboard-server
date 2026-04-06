@@ -1,7 +1,7 @@
 mod game_state;
 mod server;
 
-use game_state::{merge_patch, tick_timers, GameState};
+use game_state::{merge_patch_and_sync, tick_timers, GameState};
 use server::{try_bind, HttpState, PREFERRED_HTTP_PORT};
 use std::sync::Arc;
 use tauri::{Manager, RunEvent};
@@ -24,7 +24,7 @@ async fn patch_game_state(
 ) -> Result<GameState, String> {
     let mut w = state.game.write().await;
     let current = (*w).clone();
-    let merged = merge_patch(&current, &patch)?;
+    let merged = merge_patch_and_sync(&current, &patch)?;
     *w = merged;
     Ok((*w).clone())
 }

@@ -16,6 +16,8 @@ export type GameState = {
   logo_a: string;
   logo_b: string;
   Timer: string;
+  /** Запомненная длина периода для «Сброс» на пульте (сервер: `sync_timer_baseline`). */
+  TimerBaseline: string;
   PowerPlayTimer: string;
   PowerPlayActive: boolean;
   Period: number;
@@ -44,6 +46,7 @@ export const RUST_DEFAULT_GAME_STATE: GameState = {
   logo_a: "team-a.png",
   logo_b: "team-b.png",
   Timer: DEFAULT_TIMER_MMSS,
+  TimerBaseline: DEFAULT_TIMER_MMSS,
   PowerPlayTimer: "02:00",
   PowerPlayActive: false,
   Period: 1,
@@ -106,6 +109,7 @@ export function coerceGameState(raw: unknown): GameState {
     logo_a: pickStr(r, "logo_a", d.logo_a),
     logo_b: pickStr(r, "logo_b", d.logo_b),
     Timer: pickStr(r, "Timer", d.Timer),
+    TimerBaseline: pickStr(r, "TimerBaseline", d.TimerBaseline),
     PowerPlayTimer: pickStr(r, "PowerPlayTimer", d.PowerPlayTimer),
     PowerPlayActive: pickBool(r, "PowerPlayActive", d.PowerPlayActive),
     Period: pickNum(r, "Period", d.Period),
@@ -117,6 +121,7 @@ export function coerceGameState(raw: unknown): GameState {
 /** Явный объект для PATCH — все ключи всегда в теле запроса. */
 export function gameStateToPatchJson(s: GameState): Record<string, unknown> {
   const timer = normalizeMmSsLike(s.Timer);
+  const baseline = normalizeMmSsLike(s.TimerBaseline);
   return {
     TournamentTitle: s.TournamentTitle,
     SeriesInfo: s.SeriesInfo,
@@ -134,6 +139,7 @@ export function gameStateToPatchJson(s: GameState): Record<string, unknown> {
     logo_a: s.logo_a,
     logo_b: s.logo_b,
     Timer: timer || RUST_DEFAULT_GAME_STATE.Timer,
+    TimerBaseline: baseline || RUST_DEFAULT_GAME_STATE.TimerBaseline,
     PowerPlayTimer: s.PowerPlayTimer,
     PowerPlayActive: s.PowerPlayActive,
     Period: s.Period,
