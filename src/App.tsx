@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  externalApiUrlFromBase,
   fetchGameState,
+  fetchSessions,
   patchGameState,
   postResetGameState,
   resolveApiBase,
+  sessionVmixUrl,
 } from "./api";
 import {
   gameStateToPatchJson,
@@ -13,8 +14,6 @@ import {
   type GameState,
 } from "./gameState";
 import "./App.css";
-
-const FALLBACK_PORT_HINT = "8765";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -48,6 +47,8 @@ function buildEmptyState(): GameState {
 }
 
 export default function App({ variant }: { variant: AppVariant }) {
+  const { sessionId = "" } = useParams<{ sessionId: string }>();
+  const nav = useNavigate();
   const [state, setState] = useState<GameState>(buildEmptyState);
   const [hydrated, setHydrated] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -60,29 +61,74 @@ export default function App({ variant }: { variant: AppVariant }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  const listenPort = httpBase
-    ? (() => {
-        try {
-          return new URL(httpBase).port || FALLBACK_PORT_HINT;
-        } catch {
-          return FALLBACK_PORT_HINT;
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await fetchSessions();
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof Error && e.message === "401") {
+          nav(
+            `/login?next=${encodeURIComponent(
+              variant === "mobile"
+                ? `/mobile/${sessionId}`
+                : `/editor/${sessionId}`,
+            )}`,
+            { replace: true },
+          );
         }
-      })()
-    : "";
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, nav, variant]);
 
-  const flushPatch = useCallback(async (next: GameState) => {
-    setSaveStatus("saving");
-    setLastError(null);
-    try {
-      const g = await patchGameState(gameStateToPatchJson(next));
-      fromServer.current = true;
-      setState(g);
-      setSaveStatus("saved");
-    } catch (e) {
-      setSaveStatus("error");
-      setLastError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
+  const redirectIfUnauthorized = useCallback(
+    (e: unknown) => {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "401" || msg.includes("login required")) {
+        nav(
+          `/login?next=${encodeURIComponent(
+            variant === "mobile"
+              ? `/mobile/${sessionId}`
+              : `/editor/${sessionId}`,
+          )}`,
+          { replace: true },
+        );
+        return true;
+      }
+      return false;
+    },
+    [nav, sessionId, variant],
+  );
+
+  const flushPatch = useCallback(
+    async (next: GameState) => {
+      if (!sessionId) return;
+      setSaveStatus("saving");
+      setLastError(null);
+      try {
+        const g = await patchGameState(sessionId, gameStateToPatchJson(next));
+        fromServer.current = true;
+        setState(g);
+        setSaveStatus("saved");
+      } catch (e) {
+        if (redirectIfUnauthorized(e)) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg === "403" || msg.includes("no access")) {
+          setSaveStatus("error");
+          setLastError("Нет доступа к этому сеансу.");
+          return;
+        }
+        setSaveStatus("error");
+        setLastError(msg);
+      }
+    },
+    [sessionId, redirectIfUnauthorized],
+  );
 
   const schedulePatch = useCallback(
     (next: GameState) => {
@@ -96,20 +142,26 @@ export default function App({ variant }: { variant: AppVariant }) {
   );
 
   useEffect(() => {
+    if (!sessionId) return;
     let cancelled = false;
     (async () => {
       try {
         const base = await resolveApiBase();
-        const g = await fetchGameState();
+        const g = await fetchGameState(sessionId);
         if (cancelled) return;
         setState(g);
         setHttpBase(base);
-        setVmixUrl(externalApiUrlFromBase(base));
+        setVmixUrl(sessionVmixUrl(base, sessionId));
         setHydrated(true);
         skipAutosave.current = true;
       } catch (e) {
         if (!cancelled) {
-          setLastError(e instanceof Error ? e.message : String(e));
+          const msg = e instanceof Error ? e.message : String(e);
+          if (msg === "403") {
+            nav("/", { replace: true, state: { sessionAccessDenied: true } });
+            return;
+          }
+          setLastError(msg);
           setHydrated(true);
         }
       }
@@ -117,7 +169,7 @@ export default function App({ variant }: { variant: AppVariant }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sessionId, nav]);
 
   /**
    * На /mobile периодически подтягиваем состояние с сервера.
@@ -128,7 +180,7 @@ export default function App({ variant }: { variant: AppVariant }) {
     if (variant === "full" && !state.Running) return;
 
     const poll = () => {
-      void fetchGameState()
+      void fetchGameState(sessionId)
         .then((g) => {
           fromServer.current = true;
           setState(g);
@@ -140,7 +192,7 @@ export default function App({ variant }: { variant: AppVariant }) {
       variant === "mobile" && !state.Running ? 2000 : 1000;
     const id = setInterval(poll, intervalMs);
     return () => clearInterval(id);
-  }, [state.Running, hydrated, variant]);
+  }, [state.Running, hydrated, variant, sessionId]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -159,33 +211,51 @@ export default function App({ variant }: { variant: AppVariant }) {
   }, [state, hydrated, schedulePatch]);
 
   async function applyQuickPatch(patch: Partial<GameState>) {
+    if (!sessionId) return;
     setSaveStatus("saving");
     setLastError(null);
     try {
-      const g = await patchGameState(patch);
+      const g = await patchGameState(sessionId, patch);
       fromServer.current = true;
       setState(g);
       setSaveStatus("saved");
     } catch (e) {
+      if (redirectIfUnauthorized(e)) return;
       setSaveStatus("error");
       setLastError(e instanceof Error ? e.message : String(e));
     }
   }
 
   async function reset() {
+    if (!sessionId) return;
     try {
-      const g = await postResetGameState();
+      const g = await postResetGameState(sessionId);
       fromServer.current = true;
       setState(g);
       setSaveStatus("saved");
       setLastError(null);
     } catch (e) {
-      setLastError(e instanceof Error ? e.message : String(e));
+      if (!redirectIfUnauthorized(e)) {
+        setLastError(e instanceof Error ? e.message : String(e));
+      }
     }
   }
 
   function update<K extends keyof GameState>(key: K, value: GameState[K]) {
     setState((s) => ({ ...s, [key]: value }));
+  }
+
+  if (!sessionId) {
+    return (
+      <div className="app page">
+        <div className="error-banner">Не указан сеанс в URL.</div>
+        <p className="muted">
+          <Link className="inline-link" to="/">
+            К списку сеансов
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   const controlDeck = (
@@ -418,36 +488,55 @@ export default function App({ variant }: { variant: AppVariant }) {
   );
 
   return (
-    <div className={`app ${variant === "mobile" ? "app--mobile" : ""}`}>
+    <div
+      className={`app ${variant === "full" ? "app--panel" : ""} ${variant === "mobile" ? "app--mobile" : ""}`}
+    >
       {variant === "full" ? (
-        <header className="header">
-          <h1>Hockey Scoreboard — панель управления</h1>
-          <p className="muted">
-            В Hockey Desktop Host укажите URL внешнего API (на этом ПК обычно
-            127.0.0.1):
+        <header className="header panel-header">
+          <div className="panel-header__brand">
+            <span className="panel-header__badge" aria-hidden>
+              HS
+            </span>
+            <div>
+              <h1>Панель управления</h1>
+              <p className="muted panel-header__subtitle">
+                Сеанс · внешний API для Hockey Desktop Host
+              </p>
+            </div>
+          </div>
+          <p className="muted panel-header__hint">
+            Вставьте в Host этот URL (опрос ~каждые 800 мс):
           </p>
           <div className="url-row">
-            <code className="url">{vmixUrl || "…"}</code>
+            <code className="url url--prominent">{vmixUrl || "…"}</code>
           </div>
-          <p className="muted small">
-            Пульт с телефона:{" "}
-            <Link className="inline-link" to="/mobile">
-              /mobile
-            </Link>{" "}
-            — в той же Wi‑Fi:{" "}
-            <code className="url-inline">
-              http://&lt;IP-этого-ПК&gt;:{listenPort || FALLBACK_PORT_HINT}
-              /mobile
-            </code>
-            . Нужен <code>npm run build</code>, затем запуск приложения.
-          </p>
+          <nav className="panel-header__nav muted small">
+            <Link className="nav-pill" to="/">
+              Все сеансы
+            </Link>
+            <Link className="nav-pill nav-pill--accent" to={`/mobile/${sessionId}`}>
+              Пульт на телефон
+            </Link>
+            {httpBase ? (
+              <span className="panel-header__muted">
+                Полный URL пульта:{" "}
+                <code className="url-inline">
+                  {httpBase}/mobile/{sessionId}
+                </code>
+              </span>
+            ) : null}
+          </nav>
         </header>
       ) : (
         <header className="header header--mobile">
           <h1>Пульт</h1>
           <p className="muted small">
-            <Link className="inline-link" to="/">
+            <Link className="inline-link" to={`/editor/${sessionId}`}>
               Полная панель
+            </Link>
+            {" · "}
+            <Link className="inline-link" to="/">
+              Сеансы
             </Link>
           </p>
         </header>
@@ -457,12 +546,12 @@ export default function App({ variant }: { variant: AppVariant }) {
 
       {variant === "full" ? (
         <>
-          <section className="toolbar">
-            <button type="button" onClick={() => void reset()}>
-              Сброс всех полей по умолчанию
+          <section className="toolbar panel-toolbar">
+            <button type="button" className="btn-ghost" onClick={() => void reset()}>
+              Сброс полей к значениям по умолчанию
             </button>
-            <span className={`status status-${saveStatus}`}>
-              {saveStatus === "idle" && "Готово"}
+            <span className={`save-badge save-badge--${saveStatus}`}>
+              {saveStatus === "idle" && "Готово к редактированию"}
               {saveStatus === "saving" && "Сохранение…"}
               {saveStatus === "saved" && "Сохранено"}
               {saveStatus === "error" && "Ошибка сохранения"}
@@ -471,8 +560,8 @@ export default function App({ variant }: { variant: AppVariant }) {
 
           {lastError && <div className="error-banner">{lastError}</div>}
 
-          <main className="grid">
-        <fieldset>
+          <main className="grid panel-grid">
+        <fieldset className="form-card">
           <legend>Общее</legend>
           <label>
             TournamentTitle
@@ -497,7 +586,7 @@ export default function App({ variant }: { variant: AppVariant }) {
           </label>
         </fieldset>
 
-        <fieldset>
+        <fieldset className="form-card">
           <legend>Команды</legend>
           <label>
             TeamA
@@ -543,7 +632,7 @@ export default function App({ variant }: { variant: AppVariant }) {
           </label>
         </fieldset>
 
-        <fieldset>
+        <fieldset className="form-card">
           <legend>Счёт и броски</legend>
           <label>
             ScoreA
@@ -597,8 +686,8 @@ export default function App({ variant }: { variant: AppVariant }) {
           </label>
         </fieldset>
 
-        <fieldset>
-          <legend>Штрафы / таймеры</legend>
+        <fieldset className="form-card">
+          <legend>Штрафы и таймеры</legend>
           <label>
             penalty_a
             <input
@@ -630,7 +719,8 @@ export default function App({ variant }: { variant: AppVariant }) {
           <p className="field-hint">
             На паузе выставьте длительность периода в Timer — это же значение
             пойдёт в «Сброс» на пульте{" "}
-            <Link to="/mobile">/mobile</Link> (после старта база фиксируется при
+            <Link to={`/mobile/${sessionId}`}>/mobile</Link> (после старта база
+            фиксируется при
             запуске отсчёта).
           </p>
           <label>
@@ -650,7 +740,7 @@ export default function App({ variant }: { variant: AppVariant }) {
           </label>
         </fieldset>
 
-        <fieldset>
+        <fieldset className="form-card">
           <legend>Флаги</legend>
           <label className="check">
             <input

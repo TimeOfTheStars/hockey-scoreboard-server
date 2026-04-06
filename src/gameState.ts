@@ -25,11 +25,11 @@ export type GameState = {
   Visible: boolean;
 };
 
-/** Как в Rust `GameState::default().timer` — сброс таймера на пульте. */
+/** Длина периода по умолчанию (сервер: `GameState` по умолчанию) — ориентир для сброса на пульте. */
 export const DEFAULT_TIMER_MMSS = "20:00";
 
-/** Совпадает с дефолтами в Rust `GameState::default`. */
-export const RUST_DEFAULT_GAME_STATE: GameState = {
+/** Совпадает с дефолтами `GameState` на сервере (`hockey_server.schemas`). */
+export const SERVER_DEFAULT_GAME_STATE: GameState = {
   TournamentTitle: "Регулярный турнир по хоккею с шайбой",
   SeriesInfo: "",
   BrandingImage: "",
@@ -91,7 +91,7 @@ function pickBool(r: Record<string, unknown>, key: string, fallback: boolean): b
 export function coerceGameState(raw: unknown): GameState {
   const r =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const d = RUST_DEFAULT_GAME_STATE;
+  const d = SERVER_DEFAULT_GAME_STATE;
   return {
     TournamentTitle: pickStr(r, "TournamentTitle", d.TournamentTitle),
     SeriesInfo: pickStr(r, "SeriesInfo", d.SeriesInfo),
@@ -138,8 +138,8 @@ export function gameStateToPatchJson(s: GameState): Record<string, unknown> {
     ShotsB: s.ShotsB,
     logo_a: s.logo_a,
     logo_b: s.logo_b,
-    Timer: timer || RUST_DEFAULT_GAME_STATE.Timer,
-    TimerBaseline: baseline || RUST_DEFAULT_GAME_STATE.TimerBaseline,
+    Timer: timer || SERVER_DEFAULT_GAME_STATE.Timer,
+    TimerBaseline: baseline || SERVER_DEFAULT_GAME_STATE.TimerBaseline,
     PowerPlayTimer: s.PowerPlayTimer,
     PowerPlayActive: s.PowerPlayActive,
     Period: s.Period,
