@@ -20,6 +20,7 @@ export default function SessionHome() {
   const [err, setErr] = useState<string | null>(null);
   const [base, setBase] = useState("");
   const [name, setName] = useState("");
+  const [fieldCount, setFieldCount] = useState<1 | 2>(2);
   const nav = useNavigate();
 
   const isAdmin = me?.role === "admin";
@@ -57,7 +58,7 @@ export default function SessionHome() {
     e.preventDefault();
     setErr(null);
     try {
-      const s = await createSession(name);
+      const s = await createSession(name, fieldCount);
       setName("");
       nav(`/editor/${s.id}`);
     } catch (e) {
@@ -89,9 +90,10 @@ export default function SessionHome() {
             <p className="page-hero__eyebrow">Hockey Scoreboard</p>
             <h1 className="page-hero__title">Сеансы</h1>
             <p className="muted page-hero__lead">
-              Один сеанс — один матч. Для Hockey Desktop Host скопируйте URL{" "}
+              Сеанс: одно или два поля (два матча на одном табло). Для Host
+              скопируйте URL{" "}
               <code className="url-inline">…/api/sessions/&lt;id&gt;/vmix</code>{" "}
-              из карточки.
+              — ответ в формате JSON-массива.
             </p>
           </div>
           <div className="page-hero__actions">
@@ -122,13 +124,24 @@ export default function SessionHome() {
       {isAdmin ? (
         <section className="session-create card-elevated">
           <h2 className="session-create__title">Новый сеанс</h2>
-          <form onSubmit={onCreate} className="inline-form">
+          <form onSubmit={onCreate} className="inline-form admin-user-form">
             <input
               className="input-grow"
               placeholder="Название матча (необязательно)"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+            <select
+              className="select-input"
+              value={fieldCount}
+              onChange={(e) =>
+                setFieldCount(Number(e.target.value) === 1 ? 1 : 2)
+              }
+              aria-label="Число полей на табло"
+            >
+              <option value={2}>Два поля (А и Б)</option>
+              <option value={1}>Одно поле (только А)</option>
+            </select>
             <button type="submit" className="btn-primary">
               Создать и открыть панель
             </button>

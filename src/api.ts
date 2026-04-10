@@ -125,11 +125,14 @@ export async function fetchSessions(): Promise<SessionRow[]> {
   return (await r.json()) as SessionRow[];
 }
 
-export async function createSession(name?: string): Promise<SessionRow> {
+export async function createSession(
+  name?: string,
+  fieldCount: 1 | 2 = 2,
+): Promise<SessionRow> {
   const r = await apiFetch("/api/sessions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: name ?? "" }),
+    body: JSON.stringify({ name: name ?? "", field_count: fieldCount }),
   });
   if (!r.ok) throw new Error(await r.text());
   return (await r.json()) as SessionRow;

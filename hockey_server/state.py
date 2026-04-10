@@ -1,7 +1,7 @@
 import asyncio
 from uuid import UUID
 
-from hockey_server.schemas import GameState
+from hockey_server.schemas import GameState, default_game_state
 
 
 class SessionRuntime:
@@ -46,7 +46,8 @@ class SessionRuntime:
     async def reset_default(self, sid: UUID) -> GameState:
         lock = self._locks[sid]
         async with lock:
-            fresh = GameState()
+            fc = self._states[sid].field_count
+            fresh = default_game_state(fc)
             self._states[sid] = fresh
             return fresh.model_copy(deep=True)
 

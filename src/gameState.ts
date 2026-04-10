@@ -1,22 +1,31 @@
-/** Снимок табло для внешнего API (имена ключей как в §3). */
+/** Состояние сеанса (ключи как в JSON API сервера). */
 export type GameState = {
+  FieldCount: 1 | 2;
   TournamentTitle: string;
   SeriesInfo: string;
   BrandingImage: string;
-  TeamA: string;
-  TeamAFull: string;
-  TeamB: string;
-  TeamBFull: string;
-  penalty_a: string;
-  penalty_b: string;
-  ScoreA: number;
-  ScoreB: number;
-  ShotsA: number;
-  ShotsB: number;
-  logo_a: string;
-  logo_b: string;
+  TeamHA: string;
+  TeamHAFull: string;
+  TeamGA: string;
+  TeamGAFull: string;
+  TeamHB: string;
+  TeamHBFull: string;
+  TeamGB: string;
+  TeamGBFull: string;
+  PenaltyH: string;
+  PenaltyG: string;
+  ScoreHA: number;
+  ScoreGA: number;
+  ScoreHB: number;
+  ScoreGB: number;
+  ShotsH: number;
+  ShotsG: number;
+  LogoHA: string;
+  LogoGA: string;
+  LogoHB: string;
+  LogoGB: string;
+  logoLeagues: string;
   Timer: string;
-  /** Запомненная длина периода для «Сброс» на пульте (сервер: `sync_timer_baseline`). */
   TimerBaseline: string;
   PowerPlayTimer: string;
   PowerPlayActive: boolean;
@@ -25,26 +34,34 @@ export type GameState = {
   Visible: boolean;
 };
 
-/** Длина периода по умолчанию (сервер: `GameState` по умолчанию) — ориентир для сброса на пульте. */
 export const DEFAULT_TIMER_MMSS = "20:00";
 
-/** Совпадает с дефолтами `GameState` на сервере (`hockey_server.schemas`). */
 export const SERVER_DEFAULT_GAME_STATE: GameState = {
+  FieldCount: 2,
   TournamentTitle: "Регулярный турнир по хоккею с шайбой",
   SeriesInfo: "",
   BrandingImage: "",
-  TeamA: "A",
-  TeamAFull: "Team A",
-  TeamB: "B",
-  TeamBFull: "Team B",
-  penalty_a: "None",
-  penalty_b: "None",
-  ScoreA: 0,
-  ScoreB: 0,
-  ShotsA: 0,
-  ShotsB: 0,
-  logo_a: "team-a.png",
-  logo_b: "team-b.png",
+  TeamHA: "A",
+  TeamHAFull: "Team A",
+  TeamGA: "B",
+  TeamGAFull: "Team B",
+  TeamHB: "C",
+  TeamHBFull: "Team C",
+  TeamGB: "D",
+  TeamGBFull: "Team D",
+  PenaltyH: "None",
+  PenaltyG: "None",
+  ScoreHA: 0,
+  ScoreGA: 0,
+  ScoreHB: 0,
+  ScoreGB: 0,
+  ShotsH: 0,
+  ShotsG: 0,
+  LogoHA: "",
+  LogoGA: "",
+  LogoHB: "",
+  LogoGB: "",
+  logoLeagues: "",
   Timer: DEFAULT_TIMER_MMSS,
   TimerBaseline: DEFAULT_TIMER_MMSS,
   PowerPlayTimer: "02:00",
@@ -54,7 +71,6 @@ export const SERVER_DEFAULT_GAME_STATE: GameState = {
   Visible: true,
 };
 
-/** `15` или `5` → `15:00` / `5:00` для полей MM:SS. */
 export function normalizeMmSsLike(v: string): string {
   const t = v.trim();
   if (!t) return t;
@@ -84,30 +100,87 @@ function pickBool(r: Record<string, unknown>, key: string, fallback: boolean): b
   return fallback;
 }
 
-/**
- * После JSON.parse все ключи гарантированно есть — иначе автосохранение могло
- * не отправлять часть полей (`JSON.stringify` опускает undefined).
- */
+function pickFieldCount(r: Record<string, unknown>): 1 | 2 {
+  const v = r.FieldCount;
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string"
+        ? Number.parseInt(v, 10)
+        : 2;
+  if (n === 1) return 1;
+  return 2;
+}
+
+/** Ответ сервера после JSON.parse; поддерживает старый формат TeamA/ScoreA. */
 export function coerceGameState(raw: unknown): GameState {
   const r =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const d = SERVER_DEFAULT_GAME_STATE;
+
+  if ("TeamHA" in r) {
+    return {
+      FieldCount: pickFieldCount(r),
+      TournamentTitle: pickStr(r, "TournamentTitle", d.TournamentTitle),
+      SeriesInfo: pickStr(r, "SeriesInfo", d.SeriesInfo),
+      BrandingImage: pickStr(r, "BrandingImage", d.BrandingImage),
+      TeamHA: pickStr(r, "TeamHA", d.TeamHA),
+      TeamHAFull: pickStr(r, "TeamHAFull", d.TeamHAFull),
+      TeamGA: pickStr(r, "TeamGA", d.TeamGA),
+      TeamGAFull: pickStr(r, "TeamGAFull", d.TeamGAFull),
+      TeamHB: pickStr(r, "TeamHB", d.TeamHB),
+      TeamHBFull: pickStr(r, "TeamHBFull", d.TeamHBFull),
+      TeamGB: pickStr(r, "TeamGB", d.TeamGB),
+      TeamGBFull: pickStr(r, "TeamGBFull", d.TeamGBFull),
+      PenaltyH: pickStr(r, "PenaltyH", d.PenaltyH),
+      PenaltyG: pickStr(r, "PenaltyG", d.PenaltyG),
+      ScoreHA: pickNum(r, "ScoreHA", d.ScoreHA),
+      ScoreGA: pickNum(r, "ScoreGA", d.ScoreGA),
+      ScoreHB: pickNum(r, "ScoreHB", d.ScoreHB),
+      ScoreGB: pickNum(r, "ScoreGB", d.ScoreGB),
+      ShotsH: pickNum(r, "ShotsH", d.ShotsH),
+      ShotsG: pickNum(r, "ShotsG", d.ShotsG),
+      LogoHA: pickStr(r, "LogoHA", d.LogoHA),
+      LogoGA: pickStr(r, "LogoGA", d.LogoGA),
+      LogoHB: pickStr(r, "LogoHB", d.LogoHB),
+      LogoGB: pickStr(r, "LogoGB", d.LogoGB),
+      logoLeagues: pickStr(r, "logoLeagues", d.logoLeagues),
+      Timer: pickStr(r, "Timer", d.Timer),
+      TimerBaseline: pickStr(r, "TimerBaseline", d.TimerBaseline),
+      PowerPlayTimer: pickStr(r, "PowerPlayTimer", d.PowerPlayTimer),
+      PowerPlayActive: pickBool(r, "PowerPlayActive", d.PowerPlayActive),
+      Period: pickNum(r, "Period", d.Period),
+      Running: pickBool(r, "Running", d.Running),
+      Visible: pickBool(r, "Visible", d.Visible),
+    };
+  }
+
   return {
+    FieldCount: 1,
     TournamentTitle: pickStr(r, "TournamentTitle", d.TournamentTitle),
     SeriesInfo: pickStr(r, "SeriesInfo", d.SeriesInfo),
     BrandingImage: pickStr(r, "BrandingImage", d.BrandingImage),
-    TeamA: pickStr(r, "TeamA", d.TeamA),
-    TeamAFull: pickStr(r, "TeamAFull", d.TeamAFull),
-    TeamB: pickStr(r, "TeamB", d.TeamB),
-    TeamBFull: pickStr(r, "TeamBFull", d.TeamBFull),
-    penalty_a: pickStr(r, "penalty_a", d.penalty_a),
-    penalty_b: pickStr(r, "penalty_b", d.penalty_b),
-    ScoreA: pickNum(r, "ScoreA", d.ScoreA),
-    ScoreB: pickNum(r, "ScoreB", d.ScoreB),
-    ShotsA: pickNum(r, "ShotsA", d.ShotsA),
-    ShotsB: pickNum(r, "ShotsB", d.ShotsB),
-    logo_a: pickStr(r, "logo_a", d.logo_a),
-    logo_b: pickStr(r, "logo_b", d.logo_b),
+    TeamHA: pickStr(r, "TeamA", d.TeamHA),
+    TeamHAFull: pickStr(r, "TeamAFull", d.TeamHAFull),
+    TeamGA: pickStr(r, "TeamB", d.TeamGA),
+    TeamGAFull: pickStr(r, "TeamBFull", d.TeamGAFull),
+    TeamHB: "None",
+    TeamHBFull: "",
+    TeamGB: "None",
+    TeamGBFull: "",
+    PenaltyH: pickStr(r, "penalty_a", d.PenaltyH),
+    PenaltyG: pickStr(r, "penalty_b", d.PenaltyG),
+    ScoreHA: pickNum(r, "ScoreA", d.ScoreHA),
+    ScoreGA: pickNum(r, "ScoreB", d.ScoreGA),
+    ScoreHB: 0,
+    ScoreGB: 0,
+    ShotsH: pickNum(r, "ShotsA", d.ShotsH),
+    ShotsG: pickNum(r, "ShotsB", d.ShotsG),
+    LogoHA: pickStr(r, "logo_a", d.LogoHA),
+    LogoGA: pickStr(r, "logo_b", d.LogoGA),
+    LogoHB: "",
+    LogoGB: "",
+    logoLeagues: pickStr(r, "BrandingImage", d.logoLeagues),
     Timer: pickStr(r, "Timer", d.Timer),
     TimerBaseline: pickStr(r, "TimerBaseline", d.TimerBaseline),
     PowerPlayTimer: pickStr(r, "PowerPlayTimer", d.PowerPlayTimer),
@@ -118,26 +191,35 @@ export function coerceGameState(raw: unknown): GameState {
   };
 }
 
-/** Явный объект для PATCH — все ключи всегда в теле запроса. */
 export function gameStateToPatchJson(s: GameState): Record<string, unknown> {
   const timer = normalizeMmSsLike(s.Timer);
   const baseline = normalizeMmSsLike(s.TimerBaseline);
   return {
+    FieldCount: s.FieldCount,
     TournamentTitle: s.TournamentTitle,
     SeriesInfo: s.SeriesInfo,
     BrandingImage: s.BrandingImage,
-    TeamA: s.TeamA,
-    TeamAFull: s.TeamAFull,
-    TeamB: s.TeamB,
-    TeamBFull: s.TeamBFull,
-    penalty_a: s.penalty_a,
-    penalty_b: s.penalty_b,
-    ScoreA: s.ScoreA,
-    ScoreB: s.ScoreB,
-    ShotsA: s.ShotsA,
-    ShotsB: s.ShotsB,
-    logo_a: s.logo_a,
-    logo_b: s.logo_b,
+    TeamHA: s.TeamHA,
+    TeamHAFull: s.TeamHAFull,
+    TeamGA: s.TeamGA,
+    TeamGAFull: s.TeamGAFull,
+    TeamHB: s.TeamHB,
+    TeamHBFull: s.TeamHBFull,
+    TeamGB: s.TeamGB,
+    TeamGBFull: s.TeamGBFull,
+    PenaltyH: s.PenaltyH,
+    PenaltyG: s.PenaltyG,
+    ScoreHA: s.ScoreHA,
+    ScoreGA: s.ScoreGA,
+    ScoreHB: s.ScoreHB,
+    ScoreGB: s.ScoreGB,
+    ShotsH: s.ShotsH,
+    ShotsG: s.ShotsG,
+    LogoHA: s.LogoHA,
+    LogoGA: s.LogoGA,
+    LogoHB: s.LogoHB,
+    LogoGB: s.LogoGB,
+    logoLeagues: s.logoLeagues,
     Timer: timer || SERVER_DEFAULT_GAME_STATE.Timer,
     TimerBaseline: baseline || SERVER_DEFAULT_GAME_STATE.TimerBaseline,
     PowerPlayTimer: s.PowerPlayTimer,
