@@ -597,6 +597,65 @@ input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:focus {
 }
 
 /* --- Session list --- */
+.session-field-mode {
+  margin-bottom: 1rem;
+  padding: 1.25rem 1.35rem;
+}
+
+.session-field-mode__lead {
+  margin: 0 0 1rem;
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+.session-field-mode__options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 520px) {
+  .session-field-mode__options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(5, 8, 14, 0.45);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.field-mode-btn:hover {
+  border-color: var(--border-strong);
+  background: rgba(12, 18, 28, 0.55);
+}
+
+.field-mode-btn--active {
+  border-color: rgba(77, 163, 255, 0.45);
+  background: rgba(77, 163, 255, 0.1);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.field-mode-btn__title {
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+.field-mode-btn__sub {
+  line-height: 1.35;
+}
+
 .session-create {
   margin-bottom: 1.75rem;
   padding: 1.25rem 1.35rem;

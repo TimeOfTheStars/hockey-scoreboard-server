@@ -430,7 +430,7 @@ async def get_vmix(
     session_id: UUID,
     runtime: RuntimeDep,
 ) -> list[dict[str, Any]]:
-    """Чтение для Hockey Desktop Host / vMix: без cookie; формат — JSON-массив."""
+    """Чтение для Hockey Desktop Host / vMix: без cookie; JSON-массив."""
     if not runtime.has(session_id):
         raise HTTPException(status_code=404, detail="session not found")
     snap = await runtime.get_snapshot(session_id)

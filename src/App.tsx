@@ -290,10 +290,7 @@ export default function App({ variant }: { variant: AppVariant }) {
 
         <div className="deck-block deck-scores">
           <h3>Счёт {state.FieldCount === 1 ? "(поле А)" : ""}</h3>
-          <p className="deck-hint muted small">
-            Хозяева (H) · гости (G)
-            {state.FieldCount === 2 ? " · два поля на табло" : ""}
-          </p>
+          <p className="deck-hint muted small">Хозяева (H) · гости (G)</p>
           {state.FieldCount === 2 ? (
             <p className="deck-hint muted small">Поле А</p>
           ) : null}
@@ -556,7 +553,7 @@ export default function App({ variant }: { variant: AppVariant }) {
           </div>
           <p className="muted panel-header__hint">
             Вставьте в Host этот URL (опрос ~каждые 800 мс). Ответ — JSON-массив
-            из одного объекта (формат арены).
+            из одного объекта.
           </p>
           <div className="url-row">
             <code className="url url--prominent">{vmixUrl || "…"}</code>
@@ -628,8 +625,8 @@ export default function App({ variant }: { variant: AppVariant }) {
             </select>
           </label>
           <p className="field-hint">
-            При одном поле в API для поля Б всегда отдаются «None» / нули; на
-            сервере поле Б сбрасывается автоматически.
+            Режим «одно поле» обнуляет поле Б на сервере; в Host для Б уйдут
+            «None» и нули.
           </p>
           <label>
             TournamentTitle
@@ -653,7 +650,7 @@ export default function App({ variant }: { variant: AppVariant }) {
             />
           </label>
           <label>
-            logoLeagues (URL лиги)
+            logoLeagues
             <input
               value={state.logoLeagues}
               onChange={(e) => update("logoLeagues", e.target.value)}
@@ -863,7 +860,8 @@ export default function App({ variant }: { variant: AppVariant }) {
             На паузе выставьте длительность периода в Timer — это же значение
             пойдёт в «Сброс» на пульте{" "}
             <Link to={`/mobile/${sessionId}`}>/mobile</Link> (после старта база
-            фиксируется при запуске отсчёта).
+            фиксируется при
+            запуске отсчёта).
           </p>
           <label>
             PowerPlayTimer (MM:SS)

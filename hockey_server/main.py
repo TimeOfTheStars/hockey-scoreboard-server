@@ -18,8 +18,8 @@ from hockey_server.config import Settings
 from hockey_server.db import init_db, make_engine, make_session_factory
 from hockey_server.game_logic import tick_timers
 from hockey_server.models import SessionModel, User
-from hockey_server.routes import router as api_router
 from hockey_server.game_state_migrate import parse_game_state_json
+from hockey_server.routes import router as api_router
 from hockey_server.state import SessionRuntime
 
 

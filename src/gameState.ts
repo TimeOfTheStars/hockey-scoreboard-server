@@ -108,11 +108,9 @@ function pickFieldCount(r: Record<string, unknown>): 1 | 2 {
       : typeof v === "string"
         ? Number.parseInt(v, 10)
         : 2;
-  if (n === 1) return 1;
-  return 2;
+  return n === 1 ? 1 : 2;
 }
 
-/** Ответ сервера после JSON.parse; поддерживает старый формат TeamA/ScoreA. */
 export function coerceGameState(raw: unknown): GameState {
   const r =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};

@@ -1,4 +1,4 @@
-"""Формат ответа GET …/vmix для Hockey Desktop Host: JSON-массив из одного объекта."""
+"""Ответ GET …/vmix: JSON-массив из одного объекта (как на арене)."""
 
 from __future__ import annotations
 

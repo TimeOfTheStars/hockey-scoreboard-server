@@ -90,10 +90,9 @@ export default function SessionHome() {
             <p className="page-hero__eyebrow">Hockey Scoreboard</p>
             <h1 className="page-hero__title">Сеансы</h1>
             <p className="muted page-hero__lead">
-              Сеанс: одно или два поля (два матча на одном табло). Для Host
-              скопируйте URL{" "}
+              Сеанс: одно или два поля на табло. Для Host скопируйте URL{" "}
               <code className="url-inline">…/api/sessions/&lt;id&gt;/vmix</code>{" "}
-              — ответ в формате JSON-массива.
+              — ответ в виде JSON-массива.
             </p>
           </div>
           <div className="page-hero__actions">
@@ -122,31 +121,51 @@ export default function SessionHome() {
       {err && <div className="error-banner">{err}</div>}
 
       {isAdmin ? (
-        <section className="session-create card-elevated">
-          <h2 className="session-create__title">Новый сеанс</h2>
-          <form onSubmit={onCreate} className="inline-form admin-user-form">
-            <input
-              className="input-grow"
-              placeholder="Название матча (необязательно)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <select
-              className="select-input"
-              value={fieldCount}
-              onChange={(e) =>
-                setFieldCount(Number(e.target.value) === 1 ? 1 : 2)
-              }
-              aria-label="Число полей на табло"
-            >
-              <option value={2}>Два поля (А и Б)</option>
-              <option value={1}>Одно поле (только А)</option>
-            </select>
-            <button type="submit" className="btn-primary">
-              Создать и открыть панель
-            </button>
-          </form>
-        </section>
+        <>
+          <section className="session-field-mode card-elevated">
+            <h2 className="session-create__title">Сколько полей на табло?</h2>
+            <p className="muted session-field-mode__lead">
+              Выбор задаётся при создании сеанса. «Два поля» — два матча (А и Б);
+              «Одно поле» — в API и пульте правится только сторона А.
+            </p>
+            <div className="session-field-mode__options" role="group" aria-label="Режим полей">
+              <button
+                type="button"
+                className={`field-mode-btn ${fieldCount === 2 ? "field-mode-btn--active" : ""}`}
+                onClick={() => setFieldCount(2)}
+              >
+                <span className="field-mode-btn__title">Два поля</span>
+                <span className="field-mode-btn__sub muted small">
+                  HA/GA и HB/GB в выдаче Host
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`field-mode-btn ${fieldCount === 1 ? "field-mode-btn--active" : ""}`}
+                onClick={() => setFieldCount(1)}
+              >
+                <span className="field-mode-btn__title">Одно поле</span>
+                <span className="field-mode-btn__sub muted small">
+                  Только HA/GA, поле Б — None
+                </span>
+              </button>
+            </div>
+          </section>
+          <section className="session-create card-elevated">
+            <h2 className="session-create__title">Новый сеанс</h2>
+            <form onSubmit={onCreate} className="inline-form admin-user-form">
+              <input
+                className="input-grow"
+                placeholder="Название матча (необязательно)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button type="submit" className="btn-primary">
+                Создать и открыть панель
+              </button>
+            </form>
+          </section>
+        </>
       ) : null}
 
       {rows === null || me === undefined ? (

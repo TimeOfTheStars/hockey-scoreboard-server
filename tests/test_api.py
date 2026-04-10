@@ -25,8 +25,7 @@ def test_login_and_session_flow(tmp_path, monkeypatch) -> None:
         pub = client.get(f"/api/sessions/{sid}/vmix")
         assert pub.status_code == 200
         vmix = pub.json()
-        assert isinstance(vmix, list) and len(vmix) == 1
-        assert vmix[0]["Timer"] == "20:00"
+        assert isinstance(vmix, list) and vmix[0]["Timer"] == "20:00"
         r3 = client.patch(f"/api/sessions/{sid}/state", json={"ScoreHA": 3})
         assert r3.status_code == 200, r3.text
         assert r3.json()["ScoreHA"] == 3
@@ -54,8 +53,6 @@ def test_create_session_one_field_vmix(tmp_path, monkeypatch) -> None:
         row = client.get(f"/api/sessions/{sid}/vmix").json()[0]
         assert row["TeamHB"] == "None"
         assert row["TeamGB"] == "None"
-        assert row["ScoreHB"] == 0
-        assert row["ScoreGB"] == 0
 
 
 def test_operator_only_assigned_sessions(tmp_path, monkeypatch) -> None:

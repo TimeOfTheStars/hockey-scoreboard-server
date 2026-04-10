@@ -1,4 +1,4 @@
-"""Загрузка и миграция game_state_json (старый формат TeamA/ScoreA → новый HA/GA/HB/GB)."""
+"""Миграция сохранённого JSON: старый TeamA/ScoreA → новый формат HA/GA/HB/GB."""
 
 from __future__ import annotations
 
@@ -10,13 +10,16 @@ from hockey_server.schemas import GameState
 
 def migrate_raw_game_dict(d: dict[str, Any]) -> dict[str, Any]:
     if "TeamHA" in d:
-        if "FieldCount" not in d:
-            d["FieldCount"] = 2
-        return d
-    # legacy: одно поле (A vs B → поле A)
+        out = dict(d)
+        if "FieldCount" not in out:
+            out["FieldCount"] = 2
+        return out
+
     return {
         "FieldCount": 1,
-        "TournamentTitle": d.get("TournamentTitle", "Регулярный турнир по хоккею с шайбой"),
+        "TournamentTitle": d.get(
+            "TournamentTitle", "Регулярный турнир по хоккею с шайбой"
+        ),
         "SeriesInfo": d.get("SeriesInfo", ""),
         "BrandingImage": d.get("BrandingImage", ""),
         "TeamHA": d.get("TeamA", "A"),
