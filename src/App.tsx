@@ -11,6 +11,7 @@ import {
 import {
   gameStateToPatchJson,
   normalizeMmSsLike,
+  SERVER_DEFAULT_GAME_STATE,
   type GameState,
 } from "./gameState";
 import "./App.css";
@@ -21,28 +22,9 @@ export type AppVariant = "full" | "mobile";
 
 function buildEmptyState(): GameState {
   return {
-    TournamentTitle: "",
-    SeriesInfo: "",
-    BrandingImage: "",
-    TeamA: "",
-    TeamAFull: "",
-    TeamB: "",
-    TeamBFull: "",
-    penalty_a: "",
-    penalty_b: "",
-    ScoreA: 0,
-    ScoreB: 0,
-    ShotsA: 0,
-    ShotsB: 0,
-    logo_a: "",
-    logo_b: "",
+    ...SERVER_DEFAULT_GAME_STATE,
     Timer: "",
     TimerBaseline: "",
-    PowerPlayTimer: "",
-    PowerPlayActive: false,
-    Period: 0,
-    Running: false,
-    Visible: true,
   };
 }
 
@@ -307,63 +289,131 @@ export default function App({ variant }: { variant: AppVariant }) {
         </div>
 
         <div className="deck-block deck-scores">
-          <h3>Счёт</h3>
+          <h3>Счёт {state.FieldCount === 1 ? "(поле А)" : ""}</h3>
+          <p className="deck-hint muted small">
+            Хозяева (H) · гости (G)
+            {state.FieldCount === 2 ? " · два поля на табло" : ""}
+          </p>
+          {state.FieldCount === 2 ? (
+            <p className="deck-hint muted small">Поле А</p>
+          ) : null}
           <div className="score-pair">
-            <span className="team-tag">{state.TeamA || "A"}</span>
-            <span className="score-readout">{state.ScoreA}</span>
-            <div className="btn-pair">
-            <button
-              type="button"
-              className="big-btn big-btn-minus"
-              onClick={() => {
-                const s = stateRef.current;
-                void applyQuickPatch({
-                  ScoreA: Math.max(0, s.ScoreA - 1),
-                });
-              }}
-            >
-              −1
-            </button>
-            <button
-              type="button"
-              className="big-btn big-btn-plus"
-              onClick={() => {
-                const s = stateRef.current;
-                void applyQuickPatch({ ScoreA: s.ScoreA + 1 });
-              }}
-            >
-              +1
-            </button>
-            </div>
-          </div>
-          <div className="score-pair">
-            <span className="team-tag">{state.TeamB || "B"}</span>
-            <span className="score-readout">{state.ScoreB}</span>
+            <span className="team-tag">{state.TeamHA || "HA"}</span>
+            <span className="score-readout">{state.ScoreHA}</span>
             <div className="btn-pair">
               <button
                 type="button"
                 className="big-btn big-btn-minus"
-              onClick={() => {
-                const s = stateRef.current;
-                void applyQuickPatch({
-                  ScoreB: Math.max(0, s.ScoreB - 1),
-                });
-              }}
-            >
-              −1
-            </button>
-            <button
-              type="button"
-              className="big-btn big-btn-plus"
-              onClick={() => {
-                const s = stateRef.current;
-                void applyQuickPatch({ ScoreB: s.ScoreB + 1 });
-              }}
+                onClick={() => {
+                  const s = stateRef.current;
+                  void applyQuickPatch({
+                    ScoreHA: Math.max(0, s.ScoreHA - 1),
+                  });
+                }}
+              >
+                −1
+              </button>
+              <button
+                type="button"
+                className="big-btn big-btn-plus"
+                onClick={() => {
+                  const s = stateRef.current;
+                  void applyQuickPatch({ ScoreHA: s.ScoreHA + 1 });
+                }}
               >
                 +1
               </button>
             </div>
           </div>
+          <div className="score-pair">
+            <span className="team-tag">{state.TeamGA || "GA"}</span>
+            <span className="score-readout">{state.ScoreGA}</span>
+            <div className="btn-pair">
+              <button
+                type="button"
+                className="big-btn big-btn-minus"
+                onClick={() => {
+                  const s = stateRef.current;
+                  void applyQuickPatch({
+                    ScoreGA: Math.max(0, s.ScoreGA - 1),
+                  });
+                }}
+              >
+                −1
+              </button>
+              <button
+                type="button"
+                className="big-btn big-btn-plus"
+                onClick={() => {
+                  const s = stateRef.current;
+                  void applyQuickPatch({ ScoreGA: s.ScoreGA + 1 });
+                }}
+              >
+                +1
+              </button>
+            </div>
+          </div>
+          {state.FieldCount === 2 ? (
+            <>
+              <p className="deck-hint muted small">Поле Б</p>
+              <div className="score-pair">
+                <span className="team-tag">{state.TeamHB || "HB"}</span>
+                <span className="score-readout">{state.ScoreHB}</span>
+                <div className="btn-pair">
+                  <button
+                    type="button"
+                    className="big-btn big-btn-minus"
+                    onClick={() => {
+                      const s = stateRef.current;
+                      void applyQuickPatch({
+                        ScoreHB: Math.max(0, s.ScoreHB - 1),
+                      });
+                    }}
+                  >
+                    −1
+                  </button>
+                  <button
+                    type="button"
+                    className="big-btn big-btn-plus"
+                    onClick={() => {
+                      const s = stateRef.current;
+                      void applyQuickPatch({ ScoreHB: s.ScoreHB + 1 });
+                    }}
+                  >
+                    +1
+                  </button>
+                </div>
+              </div>
+              <div className="score-pair">
+                <span className="team-tag">{state.TeamGB || "GB"}</span>
+                <span className="score-readout">{state.ScoreGB}</span>
+                <div className="btn-pair">
+                  <button
+                    type="button"
+                    className="big-btn big-btn-minus"
+                    onClick={() => {
+                      const s = stateRef.current;
+                      void applyQuickPatch({
+                        ScoreGB: Math.max(0, s.ScoreGB - 1),
+                      });
+                    }}
+                  >
+                    −1
+                  </button>
+                  <button
+                    type="button"
+                    className="big-btn big-btn-plus"
+                    onClick={() => {
+                      const s = stateRef.current;
+                      void applyQuickPatch({ ScoreGB: s.ScoreGB + 1 });
+                    }}
+                  >
+                    +1
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="deck-block">
@@ -396,11 +446,11 @@ export default function App({ variant }: { variant: AppVariant }) {
         </div>
 
         <div className="deck-block">
-          <h3>Броски</h3>
+          <h3>Броски (все поля)</h3>
           <div className="subs-grid">
             <div className="subs-item">
-              <span className="subs-label">{state.TeamA || "A"}</span>
-              <span className="subs-val">{state.ShotsA}</span>
+              <span className="subs-label">Хозяева (H)</span>
+              <span className="subs-val">{state.ShotsH}</span>
               <div className="btn-pair">
                 <button
                   type="button"
@@ -408,7 +458,7 @@ export default function App({ variant }: { variant: AppVariant }) {
                   onClick={() => {
                     const s = stateRef.current;
                     void applyQuickPatch({
-                      ShotsA: Math.max(0, s.ShotsA - 1),
+                      ShotsH: Math.max(0, s.ShotsH - 1),
                     });
                   }}
                 >
@@ -419,7 +469,7 @@ export default function App({ variant }: { variant: AppVariant }) {
                   className="touch-mini"
                   onClick={() => {
                     const s = stateRef.current;
-                    void applyQuickPatch({ ShotsA: s.ShotsA + 1 });
+                    void applyQuickPatch({ ShotsH: s.ShotsH + 1 });
                   }}
                 >
                   +
@@ -427,8 +477,8 @@ export default function App({ variant }: { variant: AppVariant }) {
               </div>
             </div>
             <div className="subs-item">
-              <span className="subs-label">{state.TeamB || "B"}</span>
-              <span className="subs-val">{state.ShotsB}</span>
+              <span className="subs-label">Гости (G)</span>
+              <span className="subs-val">{state.ShotsG}</span>
               <div className="btn-pair">
                 <button
                   type="button"
@@ -436,7 +486,7 @@ export default function App({ variant }: { variant: AppVariant }) {
                   onClick={() => {
                     const s = stateRef.current;
                     void applyQuickPatch({
-                      ShotsB: Math.max(0, s.ShotsB - 1),
+                      ShotsG: Math.max(0, s.ShotsG - 1),
                     });
                   }}
                 >
@@ -447,7 +497,7 @@ export default function App({ variant }: { variant: AppVariant }) {
                   className="touch-mini"
                   onClick={() => {
                     const s = stateRef.current;
-                    void applyQuickPatch({ ShotsB: s.ShotsB + 1 });
+                    void applyQuickPatch({ ShotsG: s.ShotsG + 1 });
                   }}
                 >
                   +
@@ -505,7 +555,8 @@ export default function App({ variant }: { variant: AppVariant }) {
             </div>
           </div>
           <p className="muted panel-header__hint">
-            Вставьте в Host этот URL (опрос ~каждые 800 мс):
+            Вставьте в Host этот URL (опрос ~каждые 800 мс). Ответ — JSON-массив
+            из одного объекта (формат арены).
           </p>
           <div className="url-row">
             <code className="url url--prominent">{vmixUrl || "…"}</code>
@@ -564,6 +615,23 @@ export default function App({ variant }: { variant: AppVariant }) {
         <fieldset className="form-card">
           <legend>Общее</legend>
           <label>
+            FieldCount
+            <select
+              className="select-input"
+              value={state.FieldCount}
+              onChange={(e) =>
+                update("FieldCount", Number(e.target.value) === 1 ? 1 : 2)
+              }
+            >
+              <option value={2}>2 — два поля (А и Б)</option>
+              <option value={1}>1 — только поле А</option>
+            </select>
+          </label>
+          <p className="field-hint">
+            При одном поле в API для поля Б всегда отдаются «None» / нули; на
+            сервере поле Б сбрасывается автоматически.
+          </p>
+          <label>
             TournamentTitle
             <input
               value={state.TournamentTitle}
@@ -584,93 +652,168 @@ export default function App({ variant }: { variant: AppVariant }) {
               onChange={(e) => update("BrandingImage", e.target.value)}
             />
           </label>
-        </fieldset>
-
-        <fieldset className="form-card">
-          <legend>Команды</legend>
           <label>
-            TeamA
+            logoLeagues (URL лиги)
             <input
-              value={state.TeamA}
-              onChange={(e) => update("TeamA", e.target.value)}
-            />
-          </label>
-          <label>
-            TeamAFull
-            <input
-              value={state.TeamAFull}
-              onChange={(e) => update("TeamAFull", e.target.value)}
-            />
-          </label>
-          <label>
-            TeamB
-            <input
-              value={state.TeamB}
-              onChange={(e) => update("TeamB", e.target.value)}
-            />
-          </label>
-          <label>
-            TeamBFull
-            <input
-              value={state.TeamBFull}
-              onChange={(e) => update("TeamBFull", e.target.value)}
-            />
-          </label>
-          <label>
-            logo_a
-            <input
-              value={state.logo_a}
-              onChange={(e) => update("logo_a", e.target.value)}
-            />
-          </label>
-          <label>
-            logo_b
-            <input
-              value={state.logo_b}
-              onChange={(e) => update("logo_b", e.target.value)}
+              value={state.logoLeagues}
+              onChange={(e) => update("logoLeagues", e.target.value)}
             />
           </label>
         </fieldset>
 
         <fieldset className="form-card">
-          <legend>Счёт и броски</legend>
+          <legend>Поле А (HA / GA)</legend>
           <label>
-            ScoreA
+            TeamHA
+            <input
+              value={state.TeamHA}
+              onChange={(e) => update("TeamHA", e.target.value)}
+            />
+          </label>
+          <label>
+            TeamHAFull
+            <input
+              value={state.TeamHAFull}
+              onChange={(e) => update("TeamHAFull", e.target.value)}
+            />
+          </label>
+          <label>
+            TeamGA
+            <input
+              value={state.TeamGA}
+              onChange={(e) => update("TeamGA", e.target.value)}
+            />
+          </label>
+          <label>
+            TeamGAFull
+            <input
+              value={state.TeamGAFull}
+              onChange={(e) => update("TeamGAFull", e.target.value)}
+            />
+          </label>
+          <label>
+            LogoHA
+            <input
+              value={state.LogoHA}
+              onChange={(e) => update("LogoHA", e.target.value)}
+            />
+          </label>
+          <label>
+            LogoGA
+            <input
+              value={state.LogoGA}
+              onChange={(e) => update("LogoGA", e.target.value)}
+            />
+          </label>
+          <label>
+            ScoreHA
             <input
               type="number"
-              value={state.ScoreA}
+              value={state.ScoreHA}
               onChange={(e) =>
-                update("ScoreA", Number.parseInt(e.target.value || "0", 10))
+                update("ScoreHA", Number.parseInt(e.target.value || "0", 10))
               }
             />
           </label>
           <label>
-            ScoreB
+            ScoreGA
             <input
               type="number"
-              value={state.ScoreB}
+              value={state.ScoreGA}
               onChange={(e) =>
-                update("ScoreB", Number.parseInt(e.target.value || "0", 10))
+                update("ScoreGA", Number.parseInt(e.target.value || "0", 10))
+              }
+            />
+          </label>
+        </fieldset>
+
+        {state.FieldCount === 2 ? (
+          <fieldset className="form-card">
+            <legend>Поле Б (HB / GB)</legend>
+            <label>
+              TeamHB
+              <input
+                value={state.TeamHB}
+                onChange={(e) => update("TeamHB", e.target.value)}
+              />
+            </label>
+            <label>
+              TeamHBFull
+              <input
+                value={state.TeamHBFull}
+                onChange={(e) => update("TeamHBFull", e.target.value)}
+              />
+            </label>
+            <label>
+              TeamGB
+              <input
+                value={state.TeamGB}
+                onChange={(e) => update("TeamGB", e.target.value)}
+              />
+            </label>
+            <label>
+              TeamGBFull
+              <input
+                value={state.TeamGBFull}
+                onChange={(e) => update("TeamGBFull", e.target.value)}
+              />
+            </label>
+            <label>
+              LogoHB
+              <input
+                value={state.LogoHB}
+                onChange={(e) => update("LogoHB", e.target.value)}
+              />
+            </label>
+            <label>
+              LogoGB
+              <input
+                value={state.LogoGB}
+                onChange={(e) => update("LogoGB", e.target.value)}
+              />
+            </label>
+            <label>
+              ScoreHB
+              <input
+                type="number"
+                value={state.ScoreHB}
+                onChange={(e) =>
+                  update("ScoreHB", Number.parseInt(e.target.value || "0", 10))
+                }
+              />
+            </label>
+            <label>
+              ScoreGB
+              <input
+                type="number"
+                value={state.ScoreGB}
+                onChange={(e) =>
+                  update("ScoreGB", Number.parseInt(e.target.value || "0", 10))
+                }
+              />
+            </label>
+          </fieldset>
+        ) : null}
+
+        <fieldset className="form-card">
+          <legend>Броски и период</legend>
+          <label>
+            ShotsH
+            <input
+              type="number"
+              value={state.ShotsH}
+              onChange={(e) =>
+                update("ShotsH", Number.parseInt(e.target.value || "0", 10))
               }
             />
           </label>
           <label>
-            ShotsA
+            ShotsG
             <input
               type="number"
-              value={state.ShotsA}
+              value={state.ShotsG}
               onChange={(e) =>
-                update("ShotsA", Number.parseInt(e.target.value || "0", 10))
-              }
-            />
-          </label>
-          <label>
-            ShotsB
-            <input
-              type="number"
-              value={state.ShotsB}
-              onChange={(e) =>
-                update("ShotsB", Number.parseInt(e.target.value || "0", 10))
+                update("ShotsG", Number.parseInt(e.target.value || "0", 10))
               }
             />
           </label>
@@ -689,17 +832,17 @@ export default function App({ variant }: { variant: AppVariant }) {
         <fieldset className="form-card">
           <legend>Штрафы и таймеры</legend>
           <label>
-            penalty_a
+            PenaltyH
             <input
-              value={state.penalty_a}
-              onChange={(e) => update("penalty_a", e.target.value)}
+              value={state.PenaltyH}
+              onChange={(e) => update("PenaltyH", e.target.value)}
             />
           </label>
           <label>
-            penalty_b
+            PenaltyG
             <input
-              value={state.penalty_b}
-              onChange={(e) => update("penalty_b", e.target.value)}
+              value={state.PenaltyG}
+              onChange={(e) => update("PenaltyG", e.target.value)}
             />
           </label>
           <label>
@@ -720,8 +863,7 @@ export default function App({ variant }: { variant: AppVariant }) {
             На паузе выставьте длительность периода в Timer — это же значение
             пойдёт в «Сброс» на пульте{" "}
             <Link to={`/mobile/${sessionId}`}>/mobile</Link> (после старта база
-            фиксируется при
-            запуске отсчёта).
+            фиксируется при запуске отсчёта).
           </p>
           <label>
             PowerPlayTimer (MM:SS)

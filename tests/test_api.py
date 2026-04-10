@@ -24,10 +24,38 @@ def test_login_and_session_flow(tmp_path, monkeypatch) -> None:
         sid = r2.json()["id"]
         pub = client.get(f"/api/sessions/{sid}/vmix")
         assert pub.status_code == 200
-        assert pub.json()["Timer"] == "20:00"
-        r3 = client.patch(f"/api/sessions/{sid}/state", json={"ScoreA": 3})
+        vmix = pub.json()
+        assert isinstance(vmix, list) and len(vmix) == 1
+        assert vmix[0]["Timer"] == "20:00"
+        r3 = client.patch(f"/api/sessions/{sid}/state", json={"ScoreHA": 3})
         assert r3.status_code == 200, r3.text
-        assert r3.json()["ScoreA"] == 3
+        assert r3.json()["ScoreHA"] == 3
+
+
+def test_create_session_one_field_vmix(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "db.sqlite"))
+    monkeypatch.setenv("ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("ADMIN_PASSWORD", "secret")
+    monkeypatch.setenv("JWT_SECRET", "x" * 32)
+
+    from hockey_server.config import Settings
+    from hockey_server.main import build_app
+
+    app = build_app(Settings())
+    with TestClient(app) as client:
+        lr = client.post(
+            "/api/auth/login", json={"username": "admin", "password": "secret"}
+        )
+        assert lr.status_code == 200
+        client.cookies.update(lr.cookies)
+        r = client.post("/api/sessions", json={"name": "one", "field_count": 1})
+        assert r.status_code == 200, r.text
+        sid = r.json()["id"]
+        row = client.get(f"/api/sessions/{sid}/vmix").json()[0]
+        assert row["TeamHB"] == "None"
+        assert row["TeamGB"] == "None"
+        assert row["ScoreHB"] == 0
+        assert row["ScoreGB"] == 0
 
 
 def test_operator_only_assigned_sessions(tmp_path, monkeypatch) -> None:

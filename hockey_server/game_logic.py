@@ -1,5 +1,6 @@
 from typing import Any
 
+from hockey_server.game_state_migrate import apply_field_count_rules
 from hockey_server.schemas import GameState
 
 
@@ -66,7 +67,7 @@ def merge_patch(base: GameState, patch: dict[str, Any]) -> GameState:
     d = base.model_dump(by_alias=True, mode="json")
     for k, v in patch.items():
         d[k] = v
-    return GameState.model_validate(d)
+    return apply_field_count_rules(GameState.model_validate(d))
 
 
 def sync_timer_baseline(prev: GameState, merged: GameState) -> GameState:
