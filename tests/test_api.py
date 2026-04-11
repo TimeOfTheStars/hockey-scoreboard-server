@@ -128,11 +128,11 @@ def test_vmix_and_state_expand_logo_urls(tmp_path, monkeypatch) -> None:
         client.cookies.update(lr.cookies)
         r = client.post("/api/sessions", json={"name": "m"})
         sid = r.json()["id"]
-        rel = "logos/Титан.png"
-        want = "https://scoreboard.timeofthestars.ru/logos/Титан.png"
-        rel_space = "logos/Время звезд.png"
+        rel = "logos/Titan.png"
+        want = "https://scoreboard.timeofthestars.ru/logos/Titan.png"
+        rel_space = "logos/Vremya_zvezd.png"
         want_space = (
-            "https://scoreboard.timeofthestars.ru/logos/Время%20звезд.png"
+            "https://scoreboard.timeofthestars.ru/logos/Vremya_zvezd.png"
         )
         pr = client.patch(
             f"/api/sessions/{sid}/state", json={"LogoGA": rel}
