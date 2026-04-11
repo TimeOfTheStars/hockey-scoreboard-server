@@ -105,3 +105,40 @@ def test_operator_only_assigned_sessions(tmp_path, monkeypatch) -> None:
         assert client.get(f"/api/sessions/{id2}/state").status_code == 200
         client.cookies.clear()
         assert client.get(f"/api/sessions/{id1}/vmix").status_code == 200
+
+
+def test_vmix_and_state_expand_logo_urls(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "db.sqlite"))
+    monkeypatch.setenv("ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("ADMIN_PASSWORD", "secret")
+    monkeypatch.setenv("JWT_SECRET", "x" * 32)
+    monkeypatch.setenv(
+        "PUBLIC_BASE_URL", "https://scoreboard.timeofthestars.ru"
+    )
+
+    from hockey_server.config import Settings
+    from hockey_server.main import build_app
+
+    app = build_app(Settings())
+    with TestClient(app) as client:
+        lr = client.post(
+            "/api/auth/login", json={"username": "admin", "password": "secret"}
+        )
+        assert lr.status_code == 200
+        client.cookies.update(lr.cookies)
+        r = client.post("/api/sessions", json={"name": "m"})
+        sid = r.json()["id"]
+        rel = "logos/Титан.png"
+        want = (
+            "https://scoreboard.timeofthestars.ru/logos/"
+            "%D0%A2%D0%B8%D1%82%D0%B0%D0%BD.png"
+        )
+        pr = client.patch(
+            f"/api/sessions/{sid}/state", json={"LogoGA": rel}
+        )
+        assert pr.status_code == 200
+        assert pr.json()["LogoGA"] == rel
+        row = client.get(f"/api/sessions/{sid}/vmix").json()[0]
+        assert row["LogoGA"] == want
+        st = client.get(f"/api/sessions/{sid}/state").json()
+        assert st["LogoGA"] == want

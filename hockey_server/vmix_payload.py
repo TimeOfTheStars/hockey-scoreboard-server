@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+from hockey_server.logo_urls import expand_public_asset_url
 from hockey_server.schemas import GameState
 
 
-def build_vmix_row(gs: GameState) -> dict:
+def build_vmix_row(gs: GameState, public_base_url: str | None = None) -> dict:
+    def logo_url(s: str) -> str:
+        return expand_public_asset_url(s, public_base_url)
+
     if gs.field_count == 1:
         return {
             "TournamentTitle": gs.tournament_title,
@@ -25,11 +29,11 @@ def build_vmix_row(gs: GameState) -> dict:
             "ScoreGB": 0,
             "ShotsH": gs.shots_h,
             "ShotsG": gs.shots_g,
-            "LogoHA": gs.logo_h_a,
-            "LogoGA": gs.logo_g_a,
-            "LogoHB": "",
-            "LogoGB": "",
-            "logoLeagues": gs.logo_leagues,
+            "LogoHA": logo_url(gs.logo_h_a),
+            "LogoGA": logo_url(gs.logo_g_a),
+            "LogoHB": logo_url(""),
+            "LogoGB": logo_url(""),
+            "logoLeagues": logo_url(gs.logo_leagues),
             "Timer": gs.timer,
             "Period": gs.period,
             "Running": gs.running,
@@ -53,11 +57,11 @@ def build_vmix_row(gs: GameState) -> dict:
         "ScoreGB": gs.score_g_b,
         "ShotsH": gs.shots_h,
         "ShotsG": gs.shots_g,
-        "LogoHA": gs.logo_h_a,
-        "LogoGA": gs.logo_g_a,
-        "LogoHB": gs.logo_h_b,
-        "LogoGB": gs.logo_g_b,
-        "logoLeagues": gs.logo_leagues,
+        "LogoHA": logo_url(gs.logo_h_a),
+        "LogoGA": logo_url(gs.logo_g_a),
+        "LogoHB": logo_url(gs.logo_h_b),
+        "LogoGB": logo_url(gs.logo_g_b),
+        "logoLeagues": logo_url(gs.logo_leagues),
         "Timer": gs.timer,
         "Period": gs.period,
         "Running": gs.running,
@@ -65,5 +69,5 @@ def build_vmix_row(gs: GameState) -> dict:
     }
 
 
-def build_vmix_array(gs: GameState) -> list[dict]:
-    return [build_vmix_row(gs)]
+def build_vmix_array(gs: GameState, public_base_url: str | None = None) -> list[dict]:
+    return [build_vmix_row(gs, public_base_url)]

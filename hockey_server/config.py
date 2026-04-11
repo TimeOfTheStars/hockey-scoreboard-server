@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     admin_password: str | None = None
     cookie_secure: bool = False
     static_dir: Path | None = None
+    # База для абсолютных URL логотипов в GET /vmix и GET /state (без завершающего /)
+    public_base_url: str | None = None
 
     @field_validator("admin_username", "admin_password", mode="before")
     @classmethod

@@ -32,8 +32,9 @@ from hockey_server.schemas import (
     UserOut,
     default_game_state,
 )
-from hockey_server.vmix_payload import build_vmix_array
+from hockey_server.logo_urls import expand_logo_fields_for_response
 from hockey_server.state import SessionRuntime
+from hockey_server.vmix_payload import build_vmix_array
 
 router = APIRouter()
 
@@ -427,6 +428,7 @@ async def _persist_state(
 
 @router.get("/sessions/{session_id}/vmix")
 async def get_vmix(
+    request: Request,
     session_id: UUID,
     runtime: RuntimeDep,
 ) -> list[dict[str, Any]]:
@@ -435,11 +437,13 @@ async def get_vmix(
         raise HTTPException(status_code=404, detail="session not found")
     snap = await runtime.get_snapshot(session_id)
     assert snap is not None
-    return build_vmix_array(snap)
+    base = request.app.state.settings.public_base_url
+    return build_vmix_array(snap, base)
 
 
 @router.get("/sessions/{session_id}/state")
 async def get_state(
+    request: Request,
     session_id: UUID,
     runtime: RuntimeDep,
 ) -> dict[str, Any]:
@@ -448,7 +452,9 @@ async def get_state(
         raise HTTPException(status_code=404, detail="session not found")
     snap = await runtime.get_snapshot(session_id)
     assert snap is not None
-    return snap.model_dump(by_alias=True, mode="json")
+    return expand_logo_fields_for_response(
+        snap, request.app.state.settings.public_base_url
+    )
 
 
 @router.patch("/sessions/{session_id}/state")
