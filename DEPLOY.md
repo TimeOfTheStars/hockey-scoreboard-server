@@ -8,44 +8,46 @@
 
 - Один процесс **Uvicorn** отдаёт и **REST API** (`/api/...`), и **SPA** (корень и `index.html` для маршрутов фронта).
 - Данные — **один файл SQLite** (`DATABASE_PATH`); бэкапы = копирование этого файла.
-- Вход операторов/админа — **cookie** `hockey_auth`; за **HTTPS** нужно включить **`COOKIE_SECURE=true`**.
+- Вход операторов/админа — **cookie** `hockey_auth`; за **HTTPS** нужно включить `COOKIE_SECURE=true`.
 
 ---
 
 ## 2. Требования к серверу
 
-| Компонент | Минимум / рекомендация |
-|-----------|-------------------------|
-| ОС | Debian 12 / Ubuntu 22.04+ (или другой Linux с systemd) |
-| CPU/RAM | 1 vCPU, 512 MB RAM достаточно для небольшой нагрузки |
-| Диск | 10+ GB; место под БД и логи |
-| Python | **3.11+** (см. `pyproject.toml`) |
-| Node.js | **20.x LTS** или **22.x** (для `npm run build` на сервере или на CI) |
-| Сеть | Открытый **443** (HTTPS) и/или **80** (редирект на HTTPS); порт приложения (например **8765**) можно оставить только на `127.0.0.1` |
+
+| Компонент | Минимум / рекомендация                                                                                                              |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ОС        | Debian 12 / Ubuntu 22.04+ (или другой Linux с systemd)                                                                              |
+| CPU/RAM   | 1 vCPU, 512 MB RAM достаточно для небольшой нагрузки                                                                                |
+| Диск      | 10+ GB; место под БД и логи                                                                                                         |
+| Python    | **3.11+** (см. `pyproject.toml`)                                                                                                    |
+| Node.js   | **20.x LTS** или **22.x** (для `npm run build` на сервере или на CI)                                                                |
+| Сеть      | Открытый **443** (HTTPS) и/или **80** (редирект на HTTPS); порт приложения (например **8765**) можно оставить только на `127.0.0.1` |
+
 
 ---
 
 ## 3. Учётные записи и безопасность (до установки)
 
 1. **SSH**: ключи вместо пароля, при необходимости `fail2ban`.
-2. **Пользователь для сервиса**: отдельный системный пользователь (например `hockey`), без логина в shell или с ограниченным shell — приложение не должно работать от `root`.
+2. **Пользователь для сервиса**: на одном VDS проще всего **не указывать `User=` в systemd** — сервис идёт от **root** (как у вас после `sudo systemctl`). Отдельный пользователь (`User=hockey` и `chown`) нужен только если хотите изоляцию прав; это не обязательно для работы приложения.
 3. **Секреты**:
-   - `JWT_SECRET` — длинная случайная строка (например 32+ байта в hex/base64).
-   - `ADMIN_PASSWORD` — только для **первого** создания админа при пустой БД; потом менять пароль логично через политику организации (отдельной смены пароля в UI может не быть — уточняйте по коду).
+  - `JWT_SECRET` — длинная случайная строка (например 32+ байта в hex/base64).
+  - `ADMIN_PASSWORD` — только для **первого** создания админа при пустой БД; потом менять пароль логично через политику организации (отдельной смены пароля в UI может не быть — уточняйте по коду).
 4. **Файрвол**: `ufw allow OpenSSH`, `ufw allow 80,443/tcp`, `ufw enable` (пример для UFW).
 
 ---
 
 ## 4. Каталог установки и перенос кода
 
-Рекомендуемый путь (пример): `/opt/hockey-scoreboard`.
+Рекомендуемый путь (пример): `/opt/hockey-scoreboard-server` (как у клона репозитория `hockey-scoreboard-server`). Если каталог другой — **везде один путь**: в юните systemd (`WorkingDirectory`, `EnvironmentFile`, `ExecStart`), в `.env` (`DATABASE_PATH`, `STATIC_DIR` при абсолютных путях).
 
 ### 4.1. Вариант A — `git clone` на сервере
 
 ```bash
-sudo mkdir -p /opt/hockey-scoreboard
-sudo chown "$USER:$USER" /opt/hockey-scoreboard
-cd /opt/hockey-scoreboard
+sudo mkdir -p /opt/hockey-scoreboard-server
+sudo chown "$USER:$USER" /opt/hockey-scoreboard-server
+cd /opt/hockey-scoreboard-server
 git clone <URL-репозитория> .
 ```
 
@@ -63,7 +65,7 @@ git clone <URL-репозитория> .
 ## 5. Python: виртуальное окружение и зависимости
 
 ```bash
-cd /opt/hockey-scoreboard
+cd /opt/hockey-scoreboard-server
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
@@ -85,14 +87,14 @@ pip install -e .
 На сервере (или на машине сборки с тем же исходником):
 
 ```bash
-cd /opt/hockey-scoreboard
+cd /opt/hockey-scoreboard-server
 npm ci
 npm run build
 ```
 
-Должен появиться каталог **`dist/`** с `index.html` и ассетами.
+Должен появиться каталог `dist/` с `index.html` и ассетами.
 
-Переменная **`STATIC_DIR`** (если задана) должна указывать на этот каталог; иначе приложение ищет `dist/` относительно корня проекта (см. `hockey_server/config.py` → `resolved_static_dir()`).
+Переменная `STATIC_DIR` (если задана) должна указывать на этот каталог; иначе приложение ищет `dist/` относительно корня проекта (см. `hockey_server/config.py` → `resolved_static_dir()`).
 
 После каждого обновления фронта повторяйте `npm run build` и перезапуск сервиса (если нужно сбросить кэш браузера — по политике версионирования).
 
@@ -100,15 +102,17 @@ npm run build
 
 ## 7. Переменные окружения
 
-Создайте файл **`/opt/hockey-scoreboard/.env`** (права `600`, владелец — пользователь сервиса). Ориентир — [.env.example](.env.example).
+Создайте файл `/opt/hockey-scoreboard-server/.env` (желательно `chmod 600`). Ориентир — [.env.example](.env.example).
 
-| Переменная | Назначение |
-|------------|------------|
-| `DATABASE_PATH` | Путь к SQLite (каталог должен существовать или создаваться скриптом/вручную). Пример: `/opt/hockey-scoreboard/data/hockey.db` |
-| `JWT_SECRET` | Подпись JWT в cookie; **обязательно** задать в проде |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Если БД **пустая**, при первом старте создаётся администратор |
-| `COOKIE_SECURE` | `true` при работе **только по HTTPS** (иначе браузер может не отправлять cookie) |
-| `STATIC_DIR` | Абсолютный путь к `dist`, если не стандартное расположение |
+
+| Переменная                          | Назначение                                                                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_PATH`                     | Путь к SQLite (каталог должен существовать или создаваться скриптом/вручную). Пример: `/opt/hockey-scoreboard-server/data/hockey.db` |
+| `JWT_SECRET`                        | Подпись JWT в cookie; **обязательно** задать в проде                                                                          |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Если БД **пустая**, при первом старте создаётся администратор                                                                 |
+| `COOKIE_SECURE`                     | `true` при работе **только по HTTPS** (иначе браузер может не отправлять cookie)                                              |
+| `STATIC_DIR`                        | Абсолютный путь к `dist`, если не стандартное расположение                                                                    |
+
 
 Дополнительно (не из `.env.example`, но полезно через systemd):
 
@@ -121,14 +125,11 @@ npm run build
 ## 8. Данные и резервное копирование
 
 1. Создать каталог данных:
-
-   ```bash
-   sudo mkdir -p /opt/hockey-scoreboard/data
-   sudo chown hockey:hockey /opt/hockey-scoreboard/data
-   ```
-
+  ```bash
+   sudo mkdir -p /opt/hockey-scoreboard-server/data
+  ```
+  (Если сервис не от root — выставьте владельца тому же пользователю, что в `User=` в юните.)
 2. **Бэкап**: периодически копировать файл `hockey.db` (или весь `data/`). SQLite безопасно копировать при остановленном сервисе или с использованием `.backup` через `sqlite3` — для минимального риска останавливайте сервис на секунды крона.
-
 3. **Восстановление**: остановить сервис, положить файл БД, запустить сервис.
 
 ---
@@ -138,7 +139,7 @@ npm run build
 Рабочая команда (за прокси слушаем только localhost):
 
 ```bash
-cd /opt/hockey-scoreboard
+cd /opt/hockey-scoreboard-server
 set -a && source .env && set +a
 .venv/bin/uvicorn hockey_server.main:create_app --factory --host 127.0.0.1 --port 8765
 ```
@@ -155,7 +156,7 @@ set -a && source .env && set +a
 
 ## 10. systemd: сервис в фоне
 
-Файл **`/etc/systemd/system/hockey-scoreboard.service`** (пример; пути и пользователя подставьте свои):
+Файл `/etc/systemd/system/hockey-scoreboard.service` (пример; **без `User=`** — запуск от root, проще всего на VDS):
 
 ```ini
 [Unit]
@@ -164,23 +165,20 @@ After=network.target
 
 [Service]
 Type=simple
-User=hockey
-Group=hockey
-WorkingDirectory=/opt/hockey-scoreboard
+WorkingDirectory=/opt/hockey-scoreboard-server
 Environment=PYTHONUNBUFFERED=1
-Environment=DATABASE_PATH=/opt/hockey-scoreboard/data/hockey.db
-Environment=STATIC_DIR=/opt/hockey-scoreboard/dist
-EnvironmentFile=/opt/hockey-scoreboard/.env
-ExecStart=/opt/hockey-scoreboard/.venv/bin/uvicorn hockey_server.main:create_app --factory --host 127.0.0.1 --port 8765
+Environment=DATABASE_PATH=/opt/hockey-scoreboard-server/data/hockey.db
+Environment=STATIC_DIR=/opt/hockey-scoreboard-server/dist
+EnvironmentFile=/opt/hockey-scoreboard-server/.env
+ExecStart=/opt/hockey-scoreboard-server/.venv/bin/uvicorn hockey_server.main:create_app --factory --host 127.0.0.1 --port 8765
 Restart=on-failure
 RestartSec=5
-
-# Опционально: ограничения
-# LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
 ```
+
+Если всё же нужен отдельный пользователь: создайте его (`useradd`), сделайте `chown -R` на `/opt/hockey-scoreboard-server`, добавьте в `[Service]` строки `User=…` и `Group=…`.
 
 Активация:
 
@@ -199,9 +197,58 @@ journalctl -u hockey-scoreboard -f
 
 - Проксируйте на `http://127.0.0.1:8765`.
 - Пробрасывайте заголовки, если позже понадобится знание схемы/хоста: `X-Forwarded-Proto`, `X-Forwarded-For`, `Host` (для cookie `Path=/` обычно достаточно корня).
-- После включения HTTPS установите **`COOKIE_SECURE=true`** и перезапустите сервис.
+- После включения HTTPS установите `COOKIE_SECURE=true` и перезапустите сервис.
 
-### 11.2. Nginx (фрагмент)
+### 11.2. Let’s Encrypt через Certbot (Nginx)
+
+Удобный вариант на Debian/Ubuntu: **Certbot** с плагином **nginx** сам получит сертификат и пропишет `listen 443 ssl` в конфиге.
+
+**Перед запуском**
+
+1. Домен (например `scoreboard.example.com`) должен указывать **A/AAAA-записью** на IP вашего VDS.
+2. Установлен **Nginx**, открыты порты **80** и **443** (Let’s Encrypt сначала проверяет сайт по HTTP).
+3. В Nginx есть `server_name` с этим доменом и корневой `location` (хотя бы заглушка) или вы позже доведёте конфиг до прокси на Uvicorn — плагин `--nginx` умеет править существующий `server`.
+
+**Установка и выпуск сертификата** (Debian/Ubuntu):
+
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d scoreboard.example.com
+```
+
+Certbot задаст email, согласие с ToS и (по желанию) редирект HTTP→HTTPS. Сертификаты окажутся в `/etc/letsencrypt/live/<домен>/`.
+
+**Прокси на приложение** должны оставить в том же `server` для 443, например:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8765;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+Если Certbot создал только HTTPS-блок, добавьте `location /` вручную и проверьте конфиг:
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Автообновление**: пакет обычно ставит **systemd timer** `certbot.timer`. Проверка:
+
+```bash
+sudo systemctl status certbot.timer
+sudo certbot renew --dry-run
+```
+
+После первого успешного HTTPS — в `.env` на сервере **`COOKIE_SECURE=true`** и `sudo systemctl restart hockey-scoreboard`.
+
+### 11.3. Nginx: пример блока, если сертификаты уже есть
+
+Если сертификаты выпускали вручную или перенесли с другого сервера:
 
 ```nginx
 server {
@@ -221,9 +268,9 @@ server {
 }
 ```
 
-Редирект с 80 на 443 — по стандартным шаблонам Let’s Encrypt.
+Редирект с 80 на 443 Certbot обычно добавляет сам; при ручной настройке — отдельный `server { listen 80; return 301 https://$host$request_uri; }`.
 
-### 11.3. Caddy (минимально)
+### 11.4. Caddy (минимально)
 
 ```caddy
 scoreboard.example.com {
@@ -271,27 +318,28 @@ scoreboard.example.com {
 
 ## 15. Чеклист безопасности
 
-- [ ] `JWT_SECRET` задан и не совпадает с дефолтом из логов разработки  
-- [ ] `COOKIE_SECURE=true` при HTTPS  
-- [ ] Uvicorn не слушает `0.0.0.0` в проде без необходимости; наружу — только прокси  
-- [ ] Права на `.env` и `data/hockey.db` только у пользователя сервиса  
-- [ ] SSH и система обновлены  
-- [ ] UUID сеансов и URL `/vmix` не публиковать публично, если счёт считается чувствительным  
+- `JWT_SECRET` задан и не совпадает с дефолтом из логов разработки  
+- `COOKIE_SECURE=true` при HTTPS  
+- Uvicorn не слушает `0.0.0.0` в проде без необходимости; наружу — только прокси  
+- `.env` закрыт от чужих (`chmod 600`); при не-root сервисе владелец = `User=` в юните  
+- SSH и система обновлены  
+- UUID сеансов и URL `/vmix` не публиковать публично, если счёт считается чувствительным
 
 ---
 
 ## 16. Дополнительные пользователи и роли
 
-- Админ создаёт операторов в **`/admin/users`** (веб).
+- Админ создаёт операторов в `/admin/users` (веб).
 - Либо скрипт: [`scripts/add_user.py`](scripts/add_user.py) с ролью `admin` или `operator` (см. README).
+- Смена пароля существующего пользователя (в UI нет): [`scripts/set_password.py`](scripts/set_password.py) — `python scripts/set_password.py <логин> <новый_пароль>` при том же `DATABASE_PATH` / `.env`.
 
 ---
 
 ## 17. Откат (rollback)
 
-1. Остановить сервис.  
-2. Восстановить предыдущий каталог приложения / предыдущий коммит и `dist/`.  
-3. Восстановить БД из бэкапа **только если** новая версия портила данные.  
+1. Остановить сервис.
+2. Восстановить предыдущий каталог приложения / предыдущий коммит и `dist/`.
+3. Восстановить БД из бэкапа **только если** новая версия портила данные.
 4. Запустить сервис, проверить логи.
 
 ---

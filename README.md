@@ -50,9 +50,9 @@ pytest
 
 1. `pip install -e .` в venv или `pip install .` и перенос `hockey_server`, `dist/`.
 2. Переменные: `DATABASE_PATH`, `JWT_SECRET`, `STATIC_DIR` (каталог с `index.html`), за HTTPS — `COOKIE_SECURE=true`.
-3. Nginx/Caddy: TLS и `proxy_pass` на `127.0.0.1:8765`.
+3. Nginx/Caddy: TLS и `proxy_pass` на `127.0.0.1:8765`. Для Let’s Encrypt на Nginx: `certbot --nginx -d ваш.домен` (см. раздел 11.2 в [DEPLOY.md](DEPLOY.md)).
 
-Пример **systemd**:
+Пример **systemd** (без `User=` — сервис идёт от root, проще всего на одном VDS):
 
 ```ini
 [Unit]
@@ -61,11 +61,12 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/hockey-scoreboard
-Environment=DATABASE_PATH=/opt/hockey-scoreboard/data/hockey.db
-Environment=STATIC_DIR=/opt/hockey-scoreboard/dist
-EnvironmentFile=/opt/hockey-scoreboard/.env
-ExecStart=/opt/hockey-scoreboard/.venv/bin/uvicorn hockey_server.main:create_app --factory --host 127.0.0.1 --port 8765
+WorkingDirectory=/opt/hockey-scoreboard-server
+Environment=PYTHONUNBUFFERED=1
+Environment=DATABASE_PATH=/opt/hockey-scoreboard-server/data/hockey.db
+Environment=STATIC_DIR=/opt/hockey-scoreboard-server/dist
+EnvironmentFile=/opt/hockey-scoreboard-server/.env
+ExecStart=/opt/hockey-scoreboard-server/.venv/bin/uvicorn hockey_server.main:create_app --factory --host 127.0.0.1 --port 8765
 Restart=on-failure
 
 [Install]
@@ -83,6 +84,17 @@ python scripts/add_user.py operator2 'НадёжныйПароль'
 ```
 
 Путь к базе берётся из `DATABASE_PATH` или из `.env`. Логин должен быть уникальным.
+
+**Смена пароля** (в веб-интерфейсе нет): на сервере из корня проекта с активированным venv:
+
+```bash
+cd /opt/hockey-scoreboard-server
+source .venv/bin/activate
+export DATABASE_PATH=/opt/hockey-scoreboard-server/data/hockey.db   # или из .env
+python scripts/set_password.py admin 'НовыйНадёжныйПароль'
+```
+
+Скрипт: [`scripts/set_password.py`](scripts/set_password.py).
 
 Сейчас все пользователи видят **один и тот же** список сеансов (изоляции по владельцу в UI нет).
 

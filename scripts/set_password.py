@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
-Добавить пользователя в SQLite (тот же формат пароля bcrypt, что и у сервера).
+Сменить пароль существующего пользователя (тот же bcrypt, что у сервера).
 
-Использование (из корня репозитория, с активированным venv и pip install -e .):
+  python scripts/set_password.py <логин> <новый_пароль>
 
-  python scripts/add_user.py ИМЯ ПАРОЛЬ
-
-Путь к БД: переменная DATABASE_PATH или значение из файла .env рядом с репозиторием.
-
-Смена пароля существующего пользователя: scripts/set_password.py
+Путь к БД: DATABASE_PATH или .env в корне репозитория (как у add_user.py).
+Остановка сервиса не обязательна (SQLite пишет короткую транзакцию).
 """
 
 from __future__ import annotations
@@ -42,20 +39,19 @@ def _load_dotenv() -> None:
 
 def main() -> None:
     _load_dotenv()
-    if len(sys.argv) not in (3, 4):
+    if len(sys.argv) != 3:
         print(
-            "Использование: python scripts/add_user.py <логин> <пароль> [admin|operator]",
+            "Использование: python scripts/set_password.py <логин> <новый_пароль>",
             file=sys.stderr,
         )
         sys.exit(2)
 
-    username, password = sys.argv[1], sys.argv[2]
-    role = (sys.argv[3] if len(sys.argv) == 4 else "operator").strip().lower()
-    if role not in ("admin", "operator"):
-        print("Роль должна быть admin или operator.", file=sys.stderr)
-        sys.exit(2)
-    if not username.strip():
+    username, password = sys.argv[1].strip(), sys.argv[2]
+    if not username:
         print("Пустой логин.", file=sys.stderr)
+        sys.exit(2)
+    if not password:
+        print("Пустой пароль.", file=sys.stderr)
         sys.exit(2)
 
     db_path = os.environ.get("DATABASE_PATH", "./data/hockey.db")
@@ -67,21 +63,21 @@ def main() -> None:
 
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute(
-            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-            (username, pwd_hash, role),
+        cur = conn.execute(
+            "UPDATE users SET password_hash = ? WHERE username = ?",
+            (pwd_hash, username),
         )
         conn.commit()
-    except sqlite3.IntegrityError:
-        print(f"Пользователь «{username}» уже существует.", file=sys.stderr)
-        sys.exit(1)
+        if cur.rowcount == 0:
+            print(f"Пользователь «{username}» не найден ({db_path}).", file=sys.stderr)
+            sys.exit(1)
     except sqlite3.OperationalError as e:
         print(f"Ошибка БД ({db_path}): {e}", file=sys.stderr)
         sys.exit(1)
     finally:
         conn.close()
 
-    print(f"Пользователь «{username}» добавлен ({db_path}).")
+    print(f"Пароль для «{username}» обновлён ({db_path}).")
 
 
 if __name__ == "__main__":
