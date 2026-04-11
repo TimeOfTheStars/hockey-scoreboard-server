@@ -129,9 +129,10 @@ def test_vmix_and_state_expand_logo_urls(tmp_path, monkeypatch) -> None:
         r = client.post("/api/sessions", json={"name": "m"})
         sid = r.json()["id"]
         rel = "logos/Титан.png"
-        want = (
-            "https://scoreboard.timeofthestars.ru/logos/"
-            "%D0%A2%D0%B8%D1%82%D0%B0%D0%BD.png"
+        want = "https://scoreboard.timeofthestars.ru/logos/Титан.png"
+        rel_space = "logos/Время звезд.png"
+        want_space = (
+            "https://scoreboard.timeofthestars.ru/logos/Время%20звезд.png"
         )
         pr = client.patch(
             f"/api/sessions/{sid}/state", json={"LogoGA": rel}
@@ -142,3 +143,7 @@ def test_vmix_and_state_expand_logo_urls(tmp_path, monkeypatch) -> None:
         assert row["LogoGA"] == want
         st = client.get(f"/api/sessions/{sid}/state").json()
         assert st["LogoGA"] == want
+
+        client.patch(f"/api/sessions/{sid}/state", json={"LogoHA": rel_space})
+        row2 = client.get(f"/api/sessions/{sid}/vmix").json()[0]
+        assert row2["LogoHA"] == want_space

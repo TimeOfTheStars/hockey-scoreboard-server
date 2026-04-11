@@ -2,11 +2,26 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote
-
 from hockey_server.schemas import GameState
 
 _LOGO_KEYS = ("LogoHA", "LogoGA", "LogoHB", "LogoGB", "logoLeagues")
+
+
+def _encode_path_segment_iri(segment: str) -> str:
+    """IRI-путь: кириллица и прочий Unicode остаются в строке; кодируем пробел и небезопасный ASCII."""
+    parts: list[str] = []
+    for ch in segment:
+        o = ord(ch)
+        if ch == " ":
+            parts.append("%20")
+        elif o < 128:
+            if ch.isalnum() or ch in "-._~":
+                parts.append(ch)
+            else:
+                parts.append(f"%{o:02X}")
+        else:
+            parts.append(ch)
+    return "".join(parts)
 
 
 def expand_public_asset_url(value: str, public_base: str | None) -> str:
@@ -19,7 +34,9 @@ def expand_public_asset_url(value: str, public_base: str | None) -> str:
     path = v.lstrip("/")
     if not path:
         return value
-    encoded = "/".join(quote(segment, safe="") for segment in path.split("/"))
+    encoded = "/".join(
+        _encode_path_segment_iri(segment) for segment in path.split("/")
+    )
     return f"{base}/{encoded}"
 
 
